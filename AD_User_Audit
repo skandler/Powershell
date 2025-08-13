@@ -11,7 +11,7 @@ $ADLimitedProperties = @(
     "PasswordNeverExpires","PasswordNotRequired","PasswordExpired","SmartcardLogonRequired",
     "AccountExpirationDate","AdminCount","Created","Modified","LastBadPasswordAttempt",
     "badpwdcount","mail","CanonicalName","DistinguishedName","ServicePrincipalName",
-    "SIDHistory","PrimaryGroupID","UserAccountControl","DoesNotRequirePreAuth"
+    "SIDHistory","PrimaryGroupID","UserAccountControl","DoesNotRequirePreAuth","ObjectCategory","ObjectClass"
 )
 
 $BaseOutputFolder = "C:\Temp\AD_Audit_MultiDomain"
@@ -34,7 +34,15 @@ foreach ($Domain in $DomainList) {
     [array]$DomainUsersWithReversibleEncryptionPasswordArray = $DomainEnabledUsers | Where-Object {
         $_.UserAccountControl -band 0x0080
     }
-    [array]$DomainUserPasswordNotRequiredArray = $DomainEnabledUsers | Where-Object {$_.PasswordNotRequired -eq $True}
+
+    # Password Not Required - EXCLUDE domain trusts & computer accounts
+    [array]$DomainUserPasswordNotRequiredArray = $DomainEnabledUsers | Where-Object {
+        ($_.PasswordNotRequired -eq $True) -and
+        ($_.ObjectCategory -eq "person") -and
+        ($_.ObjectClass -eq "user") -and
+        (-not $_.SamAccountName.EndsWith('$'))
+    }
+
     [array]$DomainUserPasswordNeverExpiresArray = $DomainEnabledUsers | Where-Object {$_.PasswordNeverExpires -eq $True}
     [array]$DomainKerberosDESUsersArray = $DomainEnabledUsers | Where-Object {
         $_.UserAccountControl -band 0x200000
@@ -47,7 +55,7 @@ foreach ($Domain in $DomainList) {
     Write-Host "Enabled Users: $($DomainEnabledUsers.Count)"
     Write-Host "Inactive Enabled Users: $($DomainEnabledInactiveUsers.Count)"
     Write-Host "Reversible Encryption Password: $($DomainUsersWithReversibleEncryptionPasswordArray.Count)"
-    Write-Host "Password Not Required: $($DomainUserPasswordNotRequiredArray.Count)"
+    Write-Host "Password Not Required (filtered): $($DomainUserPasswordNotRequiredArray.Count)"
     Write-Host "Password Never Expires: $($DomainUserPasswordNeverExpiresArray.Count)"
     Write-Host "Kerberos DES: $($DomainKerberosDESUsersArray.Count)"
     Write-Host "No Kerberos Pre-Auth: $($DomainUserDoesNotRequirePreAuthArray.Count)"
