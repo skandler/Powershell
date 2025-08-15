@@ -50,6 +50,16 @@ foreach ($Domain in $DomainList) {
     [array]$DomainUserDoesNotRequirePreAuthArray = $DomainEnabledUsers | Where-Object {$_.DoesNotRequirePreAuth -eq $True}
     [array]$DomainUsersWithSIDHistoryArray = $DomainEnabledUsers | Where-Object {$_.SIDHistory -like "*"}
 
+	    # --- NEW: krbtgt password reset check ---
+    try {
+        $Krbtgt = Get-ADUser -Server $Domain -Identity "krbtgt" -Properties PasswordLastSet
+        $KrbtgtPasswordAgeDays = (New-TimeSpan -Start $Krbtgt.PasswordLastSet -End (Get-Date)).Days
+        $KrbtgtPasswordRecentlyReset = $KrbtgtPasswordAgeDays -le 180
+    } catch {
+        Write-Warning "Could not query krbtgt account in $Domain"
+        $KrbtgtPasswordRecentlyReset = $null
+    }
+
     # Console summary
     Write-Host "Total Users: $($DomainUsers.Count)"
     Write-Host "Enabled Users: $($DomainEnabledUsers.Count)"
@@ -60,7 +70,14 @@ foreach ($Domain in $DomainList) {
     Write-Host "Kerberos DES: $($DomainKerberosDESUsersArray.Count)"
     Write-Host "No Kerberos Pre-Auth: $($DomainUserDoesNotRequirePreAuthArray.Count)"
     Write-Host "SID History: $($DomainUsersWithSIDHistoryArray.Count)"
-
+	    if ($KrbtgtPasswordRecentlyReset -ne $null) {
+        if ($KrbtgtPasswordRecentlyReset) {
+            Write-Host "krbtgt password was reset in last 180 days  (Age: $KrbtgtPasswordAgeDays days)"
+        } else {
+            Write-Host "krbtgt password NOT reset in last 180 days  (Age: $KrbtgtPasswordAgeDays days)"
+        }
+    }
+	
     # Export CSVs with LastLogonDate & PasswordLastSet
     $DomainEnabledInactiveUsers |
         Select-Object SAMAccountName,DisplayName,PasswordLastSet,LastLogonDate,DistinguishedName |
