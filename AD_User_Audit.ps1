@@ -80,7 +80,7 @@ foreach ($Domain in $DomainList) {
 	
     # Export CSVs with LastLogonDate & PasswordLastSet
 	$DomainUsers |
- 		Select Object $ADLimitedProperties |
+ 		Select-Object $ADLimitedProperties |
   		Export-Csv "$OutputFolder\All_Users.csv" -NoTypeInformation
  
     $DomainEnabledInactiveUsers |
