@@ -11,7 +11,7 @@ $ADLimitedProperties = @(
     "PasswordNeverExpires","PasswordNotRequired","PasswordExpired","SmartcardLogonRequired",
     "AccountExpirationDate","AdminCount","Created","Modified","LastBadPasswordAttempt",
     "badpwdcount","mail","CanonicalName","DistinguishedName","ServicePrincipalName",
-    "SIDHistory","PrimaryGroupID","UserAccountControl","DoesNotRequirePreAuth","ObjectCategory","ObjectClass"
+    "SIDHistory","PrimaryGroupID","UserAccountControl","DoesNotRequirePreAuth","ObjectCategory","ObjectClass", "Description"
 )
 
 $BaseOutputFolder = "C:\Temp\AD_Audit_MultiDomain"
@@ -79,6 +79,10 @@ foreach ($Domain in $DomainList) {
     }
 	
     # Export CSVs with LastLogonDate & PasswordLastSet
+	$DomainUsers |
+ 		Select Object $ADLimitedProperties |
+  		Export-Csv "$OutputFolder\All_Users.csv" -NoTypeInformation
+ 
     $DomainEnabledInactiveUsers |
         Select-Object SAMAccountName,DisplayName,PasswordLastSet,LastLogonDate,DistinguishedName |
         Export-Csv "$OutputFolder\Enabled_Inactive_Users.csv" -NoTypeInformation
